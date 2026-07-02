@@ -85,13 +85,17 @@ require __DIR__ . '/../includes/header.php';
                     </td>
                     <td class="px-6 py-4 text-slate-500"><?= date('d M Y', strtotime($co['created_at'])) ?></td>
                     <td class="px-6 py-4 text-right">
-                        <a href="<?= BASE_URL ?>/companies/view.php?id=<?= $co['id'] ?>" class="text-brand-600 hover:text-brand-700 dark:text-brand-400 mr-3">View</a>
-                        <a href="<?= BASE_URL ?>/companies/edit.php?id=<?= $co['id'] ?>" class="text-slate-600 hover:text-slate-800 dark:text-slate-400 mr-3">Edit</a>
-                        <form method="POST" class="inline" onsubmit="return confirm('Delete this company and all its branches and financial data?');">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="delete_company_id" value="<?= $co['id'] ?>">
-                            <button type="submit" class="text-red-600 hover:text-red-700 dark:text-red-400">Delete</button>
-                        </form>
+                        <div class="table-actions">
+                            <a href="<?= BASE_URL ?>/companies/view.php?id=<?= $co['id'] ?>" class="btn-action btn-action-view">View</a>
+                            <span class="table-action-sep">|</span>
+                            <a href="<?= BASE_URL ?>/companies/edit.php?id=<?= $co['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                            <span class="table-action-sep">|</span>
+                            <form method="POST" class="inline" onsubmit="return confirm('Delete this company and all its branches and financial data?');">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="delete_company_id" value="<?= $co['id'] ?>">
+                                <button type="submit" class="btn-action btn-action-delete">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>

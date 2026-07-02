@@ -112,9 +112,13 @@ if ($selectedCompanyId && user_owns_company($db, $selectedCompanyId, $userId)) {
                         <?= $entry['last_updated'] ? date('d M Y H:i', strtotime($entry['last_updated'])) : '—' ?>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $selectedCompanyId ?>&branch_id=<?= $entry['branch_id'] ?>&year=<?= $selectedYear ?>&month=<?= $selectedMonth ?>" class="text-brand-600 hover:text-brand-700 dark:text-brand-400">
-                            <?= $entry['entry_count'] > 0 ? 'Edit' : 'Enter' ?>
-                        </a>
+                        <div class="table-actions">
+                            <a href="<?= BASE_URL ?>/sofp/view.php?company_id=<?= $selectedCompanyId ?>&year=<?= $selectedYear ?>&month=<?= $selectedMonth ?>&branch_id=<?= $entry['branch_id'] ?>" class="btn-action btn-action-view">View</a>
+                            <span class="table-action-sep">|</span>
+                            <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $selectedCompanyId ?>&branch_id=<?= $entry['branch_id'] ?>&year=<?= $selectedYear ?>&month=<?= $selectedMonth ?>" class="btn-action btn-action-edit">
+                                <?= $entry['entry_count'] > 0 ? 'Edit' : 'Enter' ?>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>

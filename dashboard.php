@@ -121,13 +121,17 @@ $recentCompanies = $stmt->fetchAll();
             </div>
             <?php else: ?>
             <?php foreach ($recentCompanies as $co): ?>
-            <a href="<?= BASE_URL ?>/companies/view.php?id=<?= $co['id'] ?>" class="flex items-center justify-between px-6 py-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            <div class="flex items-center justify-between px-6 py-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <div>
                     <p class="font-medium"><?= e($co['name']) ?></p>
                     <p class="text-xs text-slate-500"><?= (int)$co['branch_count'] ?> branch<?= $co['branch_count'] != 1 ? 'es' : '' ?></p>
                 </div>
-                <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
-            </a>
+                <div class="table-actions">
+                    <a href="<?= BASE_URL ?>/companies/view.php?id=<?= $co['id'] ?>" class="btn-action btn-action-view">View</a>
+                    <span class="table-action-sep">|</span>
+                    <a href="<?= BASE_URL ?>/companies/edit.php?id=<?= $co['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                </div>
+            </div>
             <?php endforeach; ?>
             <?php endif; ?>
         </div>

@@ -98,7 +98,11 @@ require __DIR__ . '/../includes/header.php';
             <span class="<?= abs($bd['totals']['error']) < 0.01 ? 'text-emerald-600' : 'text-amber-600' ?>">
                 Error: <?= format_money($bd['totals']['error']) ?>
             </span>
-            <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $bd['branch']['id'] ?>&year=<?= $year ?>&month=<?= $month ?>" class="text-brand-600 hover:text-brand-700 dark:text-brand-400">Edit</a>
+            <div class="table-actions">
+                <a href="<?= BASE_URL ?>/sofp/view.php?company_id=<?= $companyId ?>&year=<?= $year ?>&month=<?= $month ?>&branch_id=<?= $bd['branch']['id'] ?>" class="btn-action btn-action-view">View</a>
+                <span class="table-action-sep">|</span>
+                <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $bd['branch']['id'] ?>&year=<?= $year ?>&month=<?= $month ?>" class="btn-action btn-action-edit">Edit</a>
+            </div>
         </div>
     </div>
     <?php

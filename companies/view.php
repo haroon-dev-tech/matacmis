@@ -84,7 +84,11 @@ require __DIR__ . '/../includes/header.php';
                     <p class="text-sm text-slate-500"><?= e($branch['location']) ?></p>
                     <?php endif; ?>
                 </div>
-                <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400">SOMFP Entry</a>
+                <div class="table-actions">
+                    <a href="<?= BASE_URL ?>/sofp/index.php?company_id=<?= $companyId ?>" class="btn-action btn-action-view">View</a>
+                    <span class="table-action-sep">|</span>
+                    <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>

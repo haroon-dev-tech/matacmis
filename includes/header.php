@@ -49,7 +49,7 @@ if (!isset($db)) {
         })();
     </script>
 </head>
-<body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+<body class="h-full text-slate-900 antialiased dark:text-slate-100 transition-colors duration-200">
 <?php if (!empty($currentUser)) {
     require __DIR__ . '/app_start.php';
 } ?>

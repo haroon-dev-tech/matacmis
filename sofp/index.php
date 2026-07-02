@@ -190,7 +190,11 @@ require __DIR__ . '/../includes/header.php';
                     </td>
                     <td class="px-6 py-4 text-slate-500"><?= date('d M Y H:i', strtotime($row['last_updated'])) ?></td>
                     <td class="px-6 py-4 text-right">
-                        <a href="<?= BASE_URL ?>/sofp/view.php?company_id=<?= $selectedCompanyId ?>&year=<?= (int)$row['period_year'] ?>&month=<?= (int)$row['period_month'] ?><?= $branchId ? '&branch_id=' . $branchId : '' ?>" class="text-brand-600 hover:text-brand-700 dark:text-brand-400">View Details</a>
+                        <div class="table-actions">
+                            <a href="<?= BASE_URL ?>/sofp/view.php?company_id=<?= $selectedCompanyId ?>&year=<?= (int)$row['period_year'] ?>&month=<?= (int)$row['period_month'] ?><?= $branchId ? '&branch_id=' . $branchId : '' ?>" class="btn-action btn-action-view">View</a>
+                            <span class="table-action-sep">|</span>
+                            <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $selectedCompanyId ?>&year=<?= (int)$row['period_year'] ?>&month=<?= (int)$row['period_month'] ?><?= $branchId ? '&branch_id=' . $branchId : '' ?>" class="btn-action btn-action-edit">Edit</a>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
