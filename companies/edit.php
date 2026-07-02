@@ -16,6 +16,7 @@ $company = $stmt->fetch();
 $branches = get_company_branches($db, $companyId);
 
 $error = null;
+$oldLogoPath = $company['logo_path'] ?? null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf()) {
@@ -26,8 +27,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $address = trim($_POST['address'] ?? '');
         $branchData = $_POST['branches'] ?? [];
         $deleteIds = array_map('intval', $_POST['delete_branch'] ?? []);
+        $removeLogo = !empty($_POST['remove_logo']);
 
-        if ($name === '') {
+        $uploadedLogoPath = null;
+        $uploadedLogoAbsPath = null;
+
+        if (isset($_FILES['logo']) && (int) $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if ((int) $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+                $error = 'Failed to upload logo image.';
+            } else {
+                $maxLogoSize = 2 * 1024 * 1024; // 2MB
+                if ((int) $_FILES['logo']['size'] > $maxLogoSize) {
+                    $error = 'Logo image must be 2MB or smaller.';
+                } else {
+                    $tmpPath = $_FILES['logo']['tmp_name'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mimeType = $finfo ? finfo_file($finfo, $tmpPath) : '';
+                    if ($finfo) {
+                        finfo_close($finfo);
+                    }
+
+                    $allowedMimeTypes = [
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        'image/gif' => 'gif',
+                    ];
+
+                    if (!isset($allowedMimeTypes[$mimeType])) {
+                        $error = 'Only JPG, PNG, WEBP, or GIF logos are allowed.';
+                    } else {
+                        $uploadDir = __DIR__ . '/../uploads/company-logos';
+                        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+                            $error = 'Unable to create logo upload directory.';
+                        } else {
+                            $extension = $allowedMimeTypes[$mimeType];
+                            $logoFilename = 'logo_' . bin2hex(random_bytes(8)) . '.' . $extension;
+                            $destinationPath = $uploadDir . '/' . $logoFilename;
+
+                            if (!move_uploaded_file($tmpPath, $destinationPath)) {
+                                $error = 'Unable to save uploaded logo.';
+                            } else {
+                                $uploadedLogoAbsPath = $destinationPath;
+                                $uploadedLogoPath = '/uploads/company-logos/' . $logoFilename;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($error !== null) {
+            // Keep validation error set above.
+        } elseif ($name === '') {
             $error = 'Company name is required.';
         } else {
             $validBranches = [];
@@ -46,9 +98,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'At least one branch is required.';
             } else {
                 try {
+                    // Ensure we have the logo column (for older DBs).
+                    $hasLogoColumnStmt = $db->query("SHOW COLUMNS FROM companies LIKE 'logo_path'");
+                    $hasLogoColumn = (bool) $hasLogoColumnStmt->fetch();
+                    if (!$hasLogoColumn) {
+                        $db->exec('ALTER TABLE companies ADD COLUMN logo_path VARCHAR(255) NULL AFTER address');
+                    }
+
+                    $newLogoPathToSave = $oldLogoPath;
+                    if (!empty($uploadedLogoPath)) {
+                        // Replace existing logo.
+                        $newLogoPathToSave = $uploadedLogoPath;
+                    } elseif ($removeLogo) {
+                        // Remove without replacement.
+                        $newLogoPathToSave = null;
+                    }
+
+                    $shouldDeleteOldLogo = ($removeLogo || !empty($uploadedLogoPath)) && !empty($oldLogoPath);
+                    $oldLogoAbsPath = $shouldDeleteOldLogo ? (__DIR__ . '/..' . $oldLogoPath) : null;
+
                     $db->beginTransaction();
-                    $stmt = $db->prepare('UPDATE companies SET name = ?, trade_license = ?, address = ? WHERE id = ?');
-                    $stmt->execute([$name, $tradeLicense ?: null, $address ?: null, $companyId]);
+                    $stmt = $db->prepare('UPDATE companies SET name = ?, trade_license = ?, address = ?, logo_path = ? WHERE id = ?');
+                    $stmt->execute([$name, $tradeLicense ?: null, $address ?: null, $newLogoPathToSave, $companyId]);
 
                     if (!empty($deleteIds)) {
                         soft_delete_branches($db, $deleteIds, $companyId);
@@ -66,10 +137,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $db->commit();
+
+                    // Delete old logo file only after DB update succeeds.
+                    if ($shouldDeleteOldLogo && $oldLogoAbsPath && is_file($oldLogoAbsPath)) {
+                        @unlink($oldLogoAbsPath);
+                    }
                     flash('success', 'Company updated successfully.');
                     redirect('/companies/view.php?id=' . $companyId);
                 } catch (Exception $e) {
                     $db->rollBack();
+                    if (!empty($uploadedLogoAbsPath) && is_file($uploadedLogoAbsPath)) {
+                        // Avoid orphaning the uploaded file if DB update fails.
+                        @unlink($uploadedLogoAbsPath);
+                    }
                     $error = 'Failed to update company.';
                 }
             }
@@ -94,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-200"><?= e($error) ?></div>
         <?php endif; ?>
 
-        <form method="POST" class="space-y-6">
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
             <?= csrf_field() ?>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -108,6 +188,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-medium">Address</label>
                     <textarea name="address" class="input-field" rows="2"><?= e($_POST['address'] ?? $company['address'] ?? '') ?></textarea>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-medium">Company Logo</label>
+                    <?php if (!empty($company['logo_path'])): ?>
+                    <div class="mb-3">
+                        <img
+                            src="<?= e(BASE_URL . $company['logo_path']) ?>"
+                            alt="<?= e($company['name']) ?> logo"
+                            class="h-16 w-16 rounded-lg border border-slate-200 object-contain p-1 dark:border-slate-700"
+                        >
+                    </div>
+                    <?php endif; ?>
+                    <input type="file" name="logo" class="input-field" accept=".jpg,.jpeg,.png,.webp,.gif,image/*">
+                    <div class="mt-2 flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            name="remove_logo"
+                            value="1"
+                            class="rounded border-slate-300 text-brand-600"
+                            id="remove-logo"
+                        >
+                        <label for="remove-logo" class="text-slate-700 dark:text-slate-200">Remove existing logo</label>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Optional. Max 2MB. JPG/PNG/WEBP/GIF.</p>
                 </div>
             </div>
 

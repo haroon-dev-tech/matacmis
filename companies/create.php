@@ -14,8 +14,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tradeLicense = trim($_POST['trade_license'] ?? '');
         $address = trim($_POST['address'] ?? '');
         $branches = $_POST['branches'] ?? [];
+        $logoPath = null;
 
-        if ($name === '') {
+        if (isset($_FILES['logo']) && (int) $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if ((int) $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+                $error = 'Failed to upload logo image.';
+            } else {
+                $maxLogoSize = 2 * 1024 * 1024; // 2MB
+                if ((int) $_FILES['logo']['size'] > $maxLogoSize) {
+                    $error = 'Logo image must be 2MB or smaller.';
+                } else {
+                    $tmpPath = $_FILES['logo']['tmp_name'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mimeType = $finfo ? finfo_file($finfo, $tmpPath) : '';
+                    if ($finfo) {
+                        finfo_close($finfo);
+                    }
+
+                    $allowedMimeTypes = [
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        'image/gif' => 'gif',
+                    ];
+
+                    if (!isset($allowedMimeTypes[$mimeType])) {
+                        $error = 'Only JPG, PNG, WEBP, or GIF logos are allowed.';
+                    } else {
+                        $uploadDir = __DIR__ . '/../uploads/company-logos';
+                        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+                            $error = 'Unable to create logo upload directory.';
+                        } else {
+                            $extension = $allowedMimeTypes[$mimeType];
+                            $logoFilename = 'logo_' . bin2hex(random_bytes(8)) . '.' . $extension;
+                            $destinationPath = $uploadDir . '/' . $logoFilename;
+
+                            if (!move_uploaded_file($tmpPath, $destinationPath)) {
+                                $error = 'Unable to save uploaded logo.';
+                            } else {
+                                $logoPath = '/uploads/company-logos/' . $logoFilename;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($error !== null) {
+            // Keep validation error set above.
+        } elseif ($name === '') {
             $error = 'Company name is required.';
         } else {
             $validBranches = [];
@@ -32,10 +79,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($validBranches)) {
                 $error = 'At least one branch is required.';
             } else {
+                $savedLogoPath = $logoPath;
                 try {
                     $db->beginTransaction();
-                    $stmt = $db->prepare('INSERT INTO companies (user_id, name, trade_license, address) VALUES (?, ?, ?, ?)');
-                    $stmt->execute([current_user_id(), $name, $tradeLicense ?: null, $address ?: null]);
+                    $hasLogoColumnStmt = $db->query("SHOW COLUMNS FROM companies LIKE 'logo_path'");
+                    $hasLogoColumn = (bool) $hasLogoColumnStmt->fetch();
+
+                    if (!$hasLogoColumn) {
+                        $db->exec('ALTER TABLE companies ADD COLUMN logo_path VARCHAR(255) NULL AFTER address');
+                    }
+
+                    $stmt = $db->prepare('INSERT INTO companies (user_id, name, trade_license, address, logo_path) VALUES (?, ?, ?, ?, ?)');
+                    $stmt->execute([current_user_id(), $name, $tradeLicense ?: null, $address ?: null, $savedLogoPath]);
                     $companyId = (int) $db->lastInsertId();
 
                     $stmt = $db->prepare('INSERT INTO branches (company_id, name, location, is_head_office) VALUES (?, ?, ?, ?)');
@@ -47,6 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect('/companies/view.php?id=' . $companyId);
                 } catch (Exception $e) {
                     $db->rollBack();
+                    if (!empty($savedLogoPath)) {
+                        $savedLogoAbsPath = __DIR__ . '/..' . $savedLogoPath;
+                        if (is_file($savedLogoAbsPath)) {
+                            @unlink($savedLogoAbsPath);
+                        }
+                    }
                     $error = 'Failed to register company. Please try again.';
                 }
             }
@@ -70,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-200"><?= e($error) ?></div>
         <?php endif; ?>
 
-        <form method="POST" class="space-y-6">
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
             <?= csrf_field() ?>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -84,6 +145,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-medium">Address</label>
                     <textarea name="address" class="input-field" rows="2" placeholder="Company address in UAE"><?= e($_POST['address'] ?? '') ?></textarea>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-medium">Company Logo</label>
+                    <input type="file" name="logo" class="input-field" accept=".jpg,.jpeg,.png,.webp,.gif,image/*">
+                    <p class="mt-1 text-xs text-slate-500">Optional. Accepted: JPG, PNG, WEBP, GIF (max 2MB).</p>
                 </div>
             </div>
 

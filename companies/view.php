@@ -15,6 +15,7 @@ $stmt->execute([$companyId]);
 $company = $stmt->fetch();
 $branches = get_company_branches($db, $companyId);
 $pageTitle = $company['name'];
+$logoPath = $company['logo_path'] ?? null;
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -33,6 +34,11 @@ require __DIR__ . '/../includes/header.php';
 <div class="grid gap-6 lg:grid-cols-3">
     <div class="card p-6 lg:col-span-1">
         <h2 class="mb-4 font-semibold">Company Information</h2>
+        <?php if (!empty($logoPath)): ?>
+        <div class="mb-4">
+            <img src="<?= e(BASE_URL . $logoPath) ?>" alt="<?= e($company['name']) ?> logo" class="h-24 w-24 rounded-lg border border-slate-200 object-contain p-1 dark:border-slate-700">
+        </div>
+        <?php endif; ?>
         <dl class="space-y-3 text-sm">
             <div>
                 <dt class="text-slate-500">Company Name</dt>
