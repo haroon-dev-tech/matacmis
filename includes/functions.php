@@ -64,7 +64,7 @@ function not_deleted(?string $alias = null): string
 
 function soft_delete_rows(PDO $db, string $table, string $where, array $params): int
 {
-    $allowed = ['users', 'companies', 'branches', 'somfp_entries'];
+    $allowed = ['users', 'companies', 'branches', 'somfp_entries', 'somci_entries'];
     if (!in_array($table, $allowed, true)) {
         throw new InvalidArgumentException('Invalid table for soft delete.');
     }
@@ -86,6 +86,12 @@ function soft_delete_branches(PDO $db, array $branchIds, int $companyId): void
     soft_delete_rows(
         $db,
         'somfp_entries',
+        "branch_id IN ($placeholders)",
+        $branchIds
+    );
+    soft_delete_rows(
+        $db,
+        'somci_entries',
         "branch_id IN ($placeholders)",
         $branchIds
     );
@@ -305,6 +311,162 @@ function get_available_somfp_years(PDO $db, int $companyId, int $userId): array
     $stmt = $db->prepare(
         'SELECT DISTINCT se.period_year
          FROM somfp_entries se
+         INNER JOIN branches b ON b.id = se.branch_id
+         INNER JOIN companies c ON c.id = b.company_id
+         WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND b.deleted_at IS NULL AND se.deleted_at IS NULL
+         ORDER BY se.period_year DESC'
+    );
+    $stmt->execute([$companyId, $userId]);
+    return array_column($stmt->fetchAll(), 'period_year');
+}
+
+function get_all_somci_line_item_keys(): array
+{
+    $config = require __DIR__ . '/../config/somci.php';
+    return $config['input_keys'];
+}
+
+function calculate_somci_totals(array $values): array
+{
+    $sum = static function (array $keys) use ($values): float {
+        $total = 0;
+        foreach ($keys as $key) {
+            $total += (float) ($values[$key] ?? 0);
+        }
+        return $total;
+    };
+
+    $totalRevenue = $sum(['sales', 'e_commerce_online_sale', 'sales_discounts']);
+    $totalDirectExpenses = $sum(['cost_of_sales']);
+    $totalOperatingAdmin = $sum([
+        'salary_wages', 'admin_expenses', 'legal_professional_consultancy',
+        'office_misc_expenses', 'trade_license_legal_expenses', 'office_rent_expenses',
+        'utility_expenses', 'printing_stationery', 'meals_refreshments_general',
+        'staff_medical_expenses', 'travel_transportation_expenses', 'employees_visa_expenses',
+        'advertisement_marketing_expenses', 'repair_maintenance_expenses', 'delivery_charges_expenses',
+    ]);
+    $totalOtherExpenses = $sum([
+        'directors_remuneration', 'bank_charges', 'wps_charges', 'fines_mukhalfa',
+    ]);
+
+    $interestOnLoans = (float) ($values['interest_on_loans'] ?? 0);
+    $depreciation = (float) ($values['depreciation'] ?? 0);
+    $otherIncome = (float) ($values['other_income'] ?? 0);
+    $corporateTax = (float) ($values['corporate_tax'] ?? 0);
+
+    $grossProfitLoss = $totalRevenue - $totalDirectExpenses;
+    $indirectExpenses = $totalOperatingAdmin + $totalOtherExpenses;
+    $profitBeforeInterest = $totalRevenue - $totalDirectExpenses - $totalOperatingAdmin - $totalOtherExpenses;
+    $profitAfterInterest = $profitBeforeInterest - $interestOnLoans;
+    $profitAfterDep = $profitAfterInterest - $depreciation;
+    $profitAfterOtherIncome = $profitAfterDep - $otherIncome;
+    $profitLoss = $profitAfterOtherIncome + $corporateTax;
+
+    return [
+        'total_revenue' => $totalRevenue,
+        'total_direct_expenses' => $totalDirectExpenses,
+        'gross_profit_loss' => $grossProfitLoss,
+        'total_operating_admin' => $totalOperatingAdmin,
+        'total_other_expenses' => $totalOtherExpenses,
+        'indirect_expenses' => $indirectExpenses,
+        'profit_before_interest' => $profitBeforeInterest,
+        'profit_after_interest' => $profitAfterInterest,
+        'profit_after_dep' => $profitAfterDep,
+        'profit_after_other_income' => $profitAfterOtherIncome,
+        'profit_loss' => $profitLoss,
+    ];
+}
+
+function get_somci_branch_values(PDO $db, int $branchId, int $year, int $month): array
+{
+    $stmt = $db->prepare(
+        'SELECT line_item_key, amount FROM somci_entries
+         WHERE branch_id = ? AND period_year = ? AND period_month = ? AND ' . not_deleted()
+    );
+    $stmt->execute([$branchId, $year, $month]);
+    $values = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $values[$row['line_item_key']] = (float) $row['amount'];
+    }
+    return $values;
+}
+
+function get_consolidated_somci_period_values(PDO $db, int $companyId, int $year, int $month, ?int $branchId = null): array
+{
+    $sql = 'SELECT se.line_item_key, SUM(se.amount) AS amount
+            FROM somci_entries se
+            INNER JOIN branches b ON b.id = se.branch_id
+            WHERE b.company_id = ? AND se.period_year = ? AND se.period_month = ?
+              AND b.deleted_at IS NULL AND se.deleted_at IS NULL';
+    $params = [$companyId, $year, $month];
+
+    if ($branchId) {
+        $sql .= ' AND se.branch_id = ?';
+        $params[] = $branchId;
+    }
+
+    $sql .= ' GROUP BY se.line_item_key';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $values = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $values[$row['line_item_key']] = (float) $row['amount'];
+    }
+    return $values;
+}
+
+function get_somci_periods(PDO $db, int $companyId, int $userId, array $filters = []): array
+{
+    $yearFrom = !empty($filters['year_from']) ? (int) $filters['year_from'] : null;
+    $yearTo = !empty($filters['year_to']) ? (int) $filters['year_to'] : null;
+    $monthFrom = !empty($filters['month_from']) ? (int) $filters['month_from'] : null;
+    $monthTo = !empty($filters['month_to']) ? (int) $filters['month_to'] : null;
+    $branchId = !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+
+    $sql = 'SELECT se.period_year, se.period_month,
+                   COUNT(DISTINCT se.branch_id) AS branch_count,
+                   MAX(se.updated_at) AS last_updated
+            FROM somci_entries se
+            INNER JOIN branches b ON b.id = se.branch_id
+            INNER JOIN companies c ON c.id = b.company_id
+            WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND b.deleted_at IS NULL AND se.deleted_at IS NULL';
+    $params = [$companyId, $userId];
+
+    if ($yearFrom && $monthFrom) {
+        $sql .= ' AND (se.period_year * 100 + se.period_month) >= ?';
+        $params[] = period_key($yearFrom, $monthFrom);
+    } elseif ($yearFrom) {
+        $sql .= ' AND se.period_year >= ?';
+        $params[] = $yearFrom;
+    }
+
+    if ($yearTo && $monthTo) {
+        $sql .= ' AND (se.period_year * 100 + se.period_month) <= ?';
+        $params[] = period_key($yearTo, $monthTo);
+    } elseif ($yearTo) {
+        $sql .= ' AND se.period_year <= ?';
+        $params[] = $yearTo;
+    }
+
+    if ($branchId) {
+        $sql .= ' AND se.branch_id = ?';
+        $params[] = $branchId;
+    }
+
+    $sql .= ' GROUP BY se.period_year, se.period_month
+              ORDER BY se.period_year DESC, se.period_month DESC';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function get_available_somci_years(PDO $db, int $companyId, int $userId): array
+{
+    $stmt = $db->prepare(
+        'SELECT DISTINCT se.period_year
+         FROM somci_entries se
          INNER JOIN branches b ON b.id = se.branch_id
          INNER JOIN companies c ON c.id = b.company_id
          WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND b.deleted_at IS NULL AND se.deleted_at IS NULL

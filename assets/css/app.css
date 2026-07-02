@@ -535,3 +535,13 @@
     background-color: #451a03;
     color: #fcd34d;
 }
+
+.somci-row-final td {
+    background: linear-gradient(90deg, #ecfdf5, #f0fdf4);
+    color: #065f46;
+    font-weight: 700;
+}
+.dark .somci-row-final td {
+    background: linear-gradient(90deg, #022c22, #064e3b);
+    color: #6ee7b7;
+}

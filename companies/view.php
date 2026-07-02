@@ -27,7 +27,8 @@ require __DIR__ . '/../includes/header.php';
     </a>
     <div class="flex gap-2">
         <a href="<?= BASE_URL ?>/companies/edit.php?id=<?= $companyId ?>" class="btn-secondary">Edit Company</a>
-        <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>" class="btn-primary">New SOMFP Entry</a>
+        <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>" class="btn-secondary">New SOMFP Entry</a>
+        <a href="<?= BASE_URL ?>/somci/entry.php?company_id=<?= $companyId ?>" class="btn-primary">New SOMCI Entry</a>
     </div>
 </div>
 
@@ -84,10 +85,19 @@ require __DIR__ . '/../includes/header.php';
                     <p class="text-sm text-slate-500"><?= e($branch['location']) ?></p>
                     <?php endif; ?>
                 </div>
-                <div class="table-actions">
-                    <a href="<?= BASE_URL ?>/sofp/index.php?company_id=<?= $companyId ?>" class="btn-action btn-action-view">View</a>
-                    <span class="table-action-sep">|</span>
-                    <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                <div class="flex flex-col items-end gap-2">
+                    <div class="table-actions">
+                        <span class="mr-1 text-xs font-medium text-slate-400">SOMFP</span>
+                        <a href="<?= BASE_URL ?>/somfp/view.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-view">View</a>
+                        <span class="table-action-sep">|</span>
+                        <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                    </div>
+                    <div class="table-actions">
+                        <span class="mr-1 text-xs font-medium text-slate-400">SOMCI</span>
+                        <a href="<?= BASE_URL ?>/somci/view.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-view">View</a>
+                        <span class="table-action-sep">|</span>
+                        <a href="<?= BASE_URL ?>/somci/entry.php?company_id=<?= $companyId ?>&branch_id=<?= $branch['id'] ?>" class="btn-action btn-action-edit">Edit</a>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>

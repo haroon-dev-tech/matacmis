@@ -37,11 +37,25 @@
                 <span>SOMFP</span>
                 <span class="nav-link-badge">Monthly</span>
             </a>
+            <a href="<?= BASE_URL ?>/somci/index.php" class="nav-link <?= $activeNav === 'somci' ? 'active' : '' ?>">
+                <span class="nav-link-icon">
+                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                </span>
+                <span>SOMCI</span>
+                <span class="nav-link-badge">Monthly</span>
+            </a>
             <a href="<?= BASE_URL ?>/sofp/index.php" class="nav-link <?= $activeNav === 'sofp' ? 'active' : '' ?>">
                 <span class="nav-link-icon">
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
                 </span>
                 <span>SOFP</span>
+                <span class="nav-link-badge">Overall</span>
+            </a>
+            <a href="<?= BASE_URL ?>/soci/index.php" class="nav-link <?= $activeNav === 'soci' ? 'active' : '' ?>">
+                <span class="nav-link-icon">
+                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                </span>
+                <span>SOCI</span>
                 <span class="nav-link-badge">Overall</span>
             </a>
         </nav>

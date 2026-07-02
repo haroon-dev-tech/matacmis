@@ -105,6 +105,15 @@ $recentCompanies = $stmt->fetchAll();
                     <p class="text-xs text-slate-500">Monthly financial position</p>
                 </div>
             </a>
+            <a href="<?= BASE_URL ?>/somci/index.php" class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition hover:border-brand-300 hover:bg-brand-50 dark:border-slate-700 dark:hover:border-brand-700 dark:hover:bg-brand-950">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                </div>
+                <div>
+                    <p class="font-medium">SOMCI Entry</p>
+                    <p class="text-xs text-slate-500">Monthly comprehensive income</p>
+                </div>
+            </a>
         </div>
     </div>
 

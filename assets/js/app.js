@@ -101,6 +101,84 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTotals();
     }
 
+    // SOMCI live calculation
+    const somciForm = document.getElementById('somci-form');
+    if (somciForm) {
+        const inputs = somciForm.querySelectorAll('[data-line-item]');
+
+        function parseVal(el) {
+            return parseFloat(el.value.replace(/,/g, '')) || 0;
+        }
+
+        function getVal(key) {
+            const el = somciForm.querySelector(`[data-line-item="${key}"]`);
+            return el ? parseVal(el) : 0;
+        }
+
+        function sumKeys(keys) {
+            return keys.reduce((sum, key) => sum + getVal(key), 0);
+        }
+
+        function setCalc(key, value) {
+            const el = document.getElementById('calc-' + key);
+            if (el) el.textContent = formatMoney(value);
+        }
+
+        function updateSomciTotals() {
+            const totalRevenue = sumKeys(['sales', 'e_commerce_online_sale', 'sales_discounts']);
+            const totalDirectExpenses = sumKeys(['cost_of_sales']);
+            const totalOperatingAdmin = sumKeys([
+                'salary_wages', 'admin_expenses', 'legal_professional_consultancy',
+                'office_misc_expenses', 'trade_license_legal_expenses', 'office_rent_expenses',
+                'utility_expenses', 'printing_stationery', 'meals_refreshments_general',
+                'staff_medical_expenses', 'travel_transportation_expenses', 'employees_visa_expenses',
+                'advertisement_marketing_expenses', 'repair_maintenance_expenses', 'delivery_charges_expenses',
+            ]);
+            const totalOtherExpenses = sumKeys([
+                'directors_remuneration', 'bank_charges', 'wps_charges', 'fines_mukhalfa',
+            ]);
+
+            const interestOnLoans = getVal('interest_on_loans');
+            const depreciation = getVal('depreciation');
+            const otherIncome = getVal('other_income');
+            const corporateTax = getVal('corporate_tax');
+
+            const grossProfitLoss = totalRevenue - totalDirectExpenses;
+            const indirectExpenses = totalOperatingAdmin + totalOtherExpenses;
+            const profitBeforeInterest = totalRevenue - totalDirectExpenses - totalOperatingAdmin - totalOtherExpenses;
+            const profitAfterInterest = profitBeforeInterest - interestOnLoans;
+            const profitAfterDep = profitAfterInterest - depreciation;
+            const profitAfterOtherIncome = profitAfterDep - otherIncome;
+            const profitLoss = profitAfterOtherIncome + corporateTax;
+
+            setCalc('gross_profit_loss', grossProfitLoss);
+            setCalc('indirect_expenses', indirectExpenses);
+            setCalc('profit_before_interest', profitBeforeInterest);
+            setCalc('profit_after_interest', profitAfterInterest);
+            setCalc('profit_after_dep', profitAfterDep);
+            setCalc('profit_after_other_income', profitAfterOtherIncome);
+            setCalc('profit_loss', profitLoss);
+        }
+
+        function formatMoney(n) {
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', updateSomciTotals);
+            input.addEventListener('blur', function () {
+                const v = parseVal(this);
+                if (v !== 0) this.value = formatMoney(v);
+            });
+            input.addEventListener('focus', function () {
+                const v = parseVal(this);
+                this.value = v === 0 ? '' : String(v);
+            });
+        });
+
+        updateSomciTotals();
+    }
+
     // Dynamic branch rows for company form
     const addBranchBtn = document.getElementById('add-branch');
     const branchContainer = document.getElementById('branch-list');
