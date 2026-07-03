@@ -69,7 +69,7 @@ require __DIR__ . '/../includes/header.php';
 
 <div class="card mb-6 p-6">
     <form method="GET" class="space-y-4">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <label class="mb-1.5 block text-sm font-medium">Company</label>
                 <select name="company_id" class="input-field">
@@ -87,14 +87,17 @@ require __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <?php
+            $years = !empty($availableYears) ? $availableYears : range((int) date('Y'), (int) date('Y') - 5);
+            ?>
             <div>
-                <label class="mb-1.5 block text-sm font-medium">Year From</label>
-                <select name="year_from" class="input-field">
-                    <?php
-                    $years = !empty($availableYears) ? $availableYears : range((int) date('Y'), (int) date('Y') - 5);
-                    foreach ($years as $y):
-                    ?>
-                    <option value="<?= $y ?>" <?= $y == $yearFrom ? 'selected' : '' ?>><?= $y ?></option>
+                <label class="mb-1.5 block text-sm font-medium">Month To</label>
+                <select name="month_to" class="input-field">
+                    <option value="0">All Months</option>
+                    <?php foreach (MONTHS as $m => $label): ?>
+                    <option value="<?= $m ?>" <?= $m == $monthTo ? 'selected' : '' ?>><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -116,11 +119,10 @@ require __DIR__ . '/../includes/header.php';
                 </select>
             </div>
             <div>
-                <label class="mb-1.5 block text-sm font-medium">Month To</label>
-                <select name="month_to" class="input-field">
-                    <option value="0">All Months</option>
-                    <?php foreach (MONTHS as $m => $label): ?>
-                    <option value="<?= $m ?>" <?= $m == $monthTo ? 'selected' : '' ?>><?= $label ?></option>
+                <label class="mb-1.5 block text-sm font-medium">Year From</label>
+                <select name="year_from" class="input-field">
+                    <?php foreach ($years as $y): ?>
+                    <option value="<?= $y ?>" <?= $y == $yearFrom ? 'selected' : '' ?>><?= $y ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

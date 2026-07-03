@@ -62,6 +62,14 @@
                 <span>SOCI</span>
                 <span class="nav-link-badge">Overall</span>
             </a>
+
+            <p class="nav-section-label mt-6">Insights</p>
+            <a href="<?= BASE_URL ?>/glance/index.php" class="nav-link <?= $activeNav === 'glance' ? 'active' : '' ?>">
+                <span class="nav-link-icon">
+                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                </span>
+                <span>Glance Picture</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
