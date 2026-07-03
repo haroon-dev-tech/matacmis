@@ -236,13 +236,90 @@ function period_key(int $year, int $month): int
     return $year * 100 + $month;
 }
 
+function normalize_report_period_filters(int $yearFrom, int $yearTo, int $monthFrom, int $monthTo): array
+{
+    if ($yearFrom > 0 && $yearTo > 0 && $yearFrom > $yearTo) {
+        [$yearFrom, $yearTo] = [$yearTo, $yearFrom];
+        if ($monthFrom > 0 && $monthTo > 0) {
+            [$monthFrom, $monthTo] = [$monthTo, $monthFrom];
+        }
+    }
+
+    return [
+        'year_from' => $yearFrom,
+        'year_to' => $yearTo,
+        'month_from' => $monthFrom,
+        'month_to' => $monthTo,
+    ];
+}
+
+function apply_period_range_sql(string $alias, int $yearFrom, int $yearTo, int $monthFrom, int $monthTo): array
+{
+    $sql = '';
+    $params = [];
+    $periodExpr = "({$alias}.period_year * 100 + {$alias}.period_month)";
+
+    if ($yearFrom > 0) {
+        $startMonth = ($monthFrom >= 1 && $monthFrom <= 12) ? $monthFrom : 1;
+        $sql .= " AND {$periodExpr} >= ?";
+        $params[] = period_key($yearFrom, $startMonth);
+    }
+
+    if ($yearTo > 0) {
+        $endMonth = ($monthTo >= 1 && $monthTo <= 12) ? $monthTo : 12;
+        $sql .= " AND {$periodExpr} <= ?";
+        $params[] = period_key($yearTo, $endMonth);
+    }
+
+    return [$sql, $params];
+}
+
+function build_report_year_options(array $availableYears, int $yearFrom, int $yearTo): array
+{
+    $years = $availableYears;
+    foreach ([$yearFrom, $yearTo, (int) date('Y')] as $year) {
+        if ($year > 0 && !in_array($year, $years, true)) {
+            $years[] = $year;
+        }
+    }
+
+    if (empty($years)) {
+        $years = range((int) date('Y'), (int) date('Y') - 5);
+    }
+
+    rsort($years);
+    return $years;
+}
+
+function report_filter_query(array $params): string
+{
+    $query = [];
+    foreach ($params as $key => $value) {
+        if ($key === 'branch_id' && empty($value)) {
+            continue;
+        }
+        if ($value === null || $value === '') {
+            continue;
+        }
+        $query[$key] = $value;
+    }
+
+    return '?' . http_build_query($query);
+}
+
 function get_somfp_periods(PDO $db, int $companyId, int $userId, array $filters = []): array
 {
-    $yearFrom = !empty($filters['year_from']) ? (int) $filters['year_from'] : null;
-    $yearTo = !empty($filters['year_to']) ? (int) $filters['year_to'] : null;
-    $monthFrom = !empty($filters['month_from']) ? (int) $filters['month_from'] : null;
-    $monthTo = !empty($filters['month_to']) ? (int) $filters['month_to'] : null;
+    $yearFrom = !empty($filters['year_from']) ? (int) $filters['year_from'] : 0;
+    $yearTo = !empty($filters['year_to']) ? (int) $filters['year_to'] : 0;
+    $monthFrom = !empty($filters['month_from']) ? (int) $filters['month_from'] : 0;
+    $monthTo = !empty($filters['month_to']) ? (int) $filters['month_to'] : 0;
     $branchId = !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+
+    $normalized = normalize_report_period_filters($yearFrom, $yearTo, $monthFrom, $monthTo);
+    $yearFrom = $normalized['year_from'];
+    $yearTo = $normalized['year_to'];
+    $monthFrom = $normalized['month_from'];
+    $monthTo = $normalized['month_to'];
 
     $sql = 'SELECT se.period_year, se.period_month,
                    COUNT(DISTINCT se.branch_id) AS branch_count,
@@ -253,21 +330,9 @@ function get_somfp_periods(PDO $db, int $companyId, int $userId, array $filters 
             WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND b.deleted_at IS NULL AND se.deleted_at IS NULL';
     $params = [$companyId, $userId];
 
-    if ($yearFrom && $monthFrom) {
-        $sql .= ' AND (se.period_year * 100 + se.period_month) >= ?';
-        $params[] = period_key($yearFrom, $monthFrom);
-    } elseif ($yearFrom) {
-        $sql .= ' AND se.period_year >= ?';
-        $params[] = $yearFrom;
-    }
-
-    if ($yearTo && $monthTo) {
-        $sql .= ' AND (se.period_year * 100 + se.period_month) <= ?';
-        $params[] = period_key($yearTo, $monthTo);
-    } elseif ($yearTo) {
-        $sql .= ' AND se.period_year <= ?';
-        $params[] = $yearTo;
-    }
+    [$rangeSql, $rangeParams] = apply_period_range_sql('se', $yearFrom, $yearTo, $monthFrom, $monthTo);
+    $sql .= $rangeSql;
+    $params = array_merge($params, $rangeParams);
 
     if ($branchId) {
         $sql .= ' AND se.branch_id = ?';
@@ -419,11 +484,17 @@ function get_consolidated_somci_period_values(PDO $db, int $companyId, int $year
 
 function get_somci_periods(PDO $db, int $companyId, int $userId, array $filters = []): array
 {
-    $yearFrom = !empty($filters['year_from']) ? (int) $filters['year_from'] : null;
-    $yearTo = !empty($filters['year_to']) ? (int) $filters['year_to'] : null;
-    $monthFrom = !empty($filters['month_from']) ? (int) $filters['month_from'] : null;
-    $monthTo = !empty($filters['month_to']) ? (int) $filters['month_to'] : null;
+    $yearFrom = !empty($filters['year_from']) ? (int) $filters['year_from'] : 0;
+    $yearTo = !empty($filters['year_to']) ? (int) $filters['year_to'] : 0;
+    $monthFrom = !empty($filters['month_from']) ? (int) $filters['month_from'] : 0;
+    $monthTo = !empty($filters['month_to']) ? (int) $filters['month_to'] : 0;
     $branchId = !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+
+    $normalized = normalize_report_period_filters($yearFrom, $yearTo, $monthFrom, $monthTo);
+    $yearFrom = $normalized['year_from'];
+    $yearTo = $normalized['year_to'];
+    $monthFrom = $normalized['month_from'];
+    $monthTo = $normalized['month_to'];
 
     $sql = 'SELECT se.period_year, se.period_month,
                    COUNT(DISTINCT se.branch_id) AS branch_count,
@@ -434,21 +505,9 @@ function get_somci_periods(PDO $db, int $companyId, int $userId, array $filters 
             WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND b.deleted_at IS NULL AND se.deleted_at IS NULL';
     $params = [$companyId, $userId];
 
-    if ($yearFrom && $monthFrom) {
-        $sql .= ' AND (se.period_year * 100 + se.period_month) >= ?';
-        $params[] = period_key($yearFrom, $monthFrom);
-    } elseif ($yearFrom) {
-        $sql .= ' AND se.period_year >= ?';
-        $params[] = $yearFrom;
-    }
-
-    if ($yearTo && $monthTo) {
-        $sql .= ' AND (se.period_year * 100 + se.period_month) <= ?';
-        $params[] = period_key($yearTo, $monthTo);
-    } elseif ($yearTo) {
-        $sql .= ' AND se.period_year <= ?';
-        $params[] = $yearTo;
-    }
+    [$rangeSql, $rangeParams] = apply_period_range_sql('se', $yearFrom, $yearTo, $monthFrom, $monthTo);
+    $sql .= $rangeSql;
+    $params = array_merge($params, $rangeParams);
 
     if ($branchId) {
         $sql .= ' AND se.branch_id = ?';
