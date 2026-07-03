@@ -64,7 +64,7 @@ function not_deleted(?string $alias = null): string
 
 function soft_delete_rows(PDO $db, string $table, string $where, array $params): int
 {
-    $allowed = ['users', 'companies', 'branches', 'somfp_entries', 'somci_entries'];
+    $allowed = ['users', 'companies', 'branches', 'somfp_entries', 'somci_entries', 'company_observations'];
     if (!in_array($table, $allowed, true)) {
         throw new InvalidArgumentException('Invalid table for soft delete.');
     }
@@ -113,6 +113,7 @@ function soft_delete_company(PDO $db, int $companyId): void
         soft_delete_branches($db, $branchIds, $companyId);
     }
 
+    soft_delete_rows($db, 'company_observations', 'company_id = ?', [$companyId]);
     soft_delete_rows($db, 'companies', 'id = ?', [$companyId]);
 }
 
@@ -474,4 +475,35 @@ function get_available_somci_years(PDO $db, int $companyId, int $userId): array
     );
     $stmt->execute([$companyId, $userId]);
     return array_column($stmt->fetchAll(), 'period_year');
+}
+
+function ensure_company_observations_table(PDO $db): void
+{
+    $hasTableStmt = $db->query("SHOW TABLES LIKE 'company_observations'");
+    if (!$hasTableStmt->fetch()) {
+        $sql = file_get_contents(__DIR__ . '/../database/migrations/add_company_observations.sql');
+        $db->exec($sql);
+    }
+}
+
+function get_company_observations(PDO $db, int $companyId): array
+{
+    $stmt = $db->prepare(
+        'SELECT * FROM company_observations
+         WHERE company_id = ? AND ' . not_deleted() . '
+         ORDER BY updated_at DESC, id DESC'
+    );
+    $stmt->execute([$companyId]);
+    return $stmt->fetchAll();
+}
+
+function get_company_observation(PDO $db, int $observationId, int $companyId): ?array
+{
+    $stmt = $db->prepare(
+        'SELECT * FROM company_observations
+         WHERE id = ? AND company_id = ? AND ' . not_deleted()
+    );
+    $stmt->execute([$observationId, $companyId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
 }

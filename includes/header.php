@@ -41,6 +41,8 @@ if (!isset($db)) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="<?= BASE_URL ?>/assets/images/logo.png">
+    <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/images/logo.png">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/app.css">
     <script>
         (function() {

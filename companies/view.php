@@ -26,6 +26,7 @@ require __DIR__ . '/../includes/header.php';
         All Companies
     </a>
     <div class="flex gap-2">
+        <a href="<?= BASE_URL ?>/observations/index.php?company_id=<?= $companyId ?>" class="btn-secondary">Observations</a>
         <a href="<?= BASE_URL ?>/companies/edit.php?id=<?= $companyId ?>" class="btn-secondary">Edit Company</a>
         <a href="<?= BASE_URL ?>/somfp/entry.php?company_id=<?= $companyId ?>" class="btn-secondary">New SOMFP Entry</a>
         <a href="<?= BASE_URL ?>/somci/entry.php?company_id=<?= $companyId ?>" class="btn-primary">New SOMCI Entry</a>

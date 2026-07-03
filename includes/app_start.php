@@ -2,9 +2,7 @@
     <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-40 flex w-[17.5rem] -translate-x-full flex-col transition-transform duration-300 ease-out lg:static lg:translate-x-0">
         <div class="sidebar-brand">
             <div class="sidebar-brand-mark">
-                <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
+                <img src="<?= BASE_URL ?>/assets/images/logo.png" alt="<?= e(APP_SHORT) ?> logo" class="sidebar-brand-logo">
             </div>
             <div class="min-w-0">
                 <p class="truncate text-sm font-semibold tracking-tight text-white">Mata Consultancy</p>
@@ -27,6 +25,12 @@
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 </span>
                 <span>Companies</span>
+            </a>
+            <a href="<?= BASE_URL ?>/observations/index.php" class="nav-link <?= $activeNav === 'observations' ? 'active' : '' ?>">
+                <span class="nav-link-icon">
+                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
+                <span>Observations &amp; Recommendations</span>
             </a>
 
             <p class="nav-section-label mt-6">Financial Reports</p>
